@@ -1506,27 +1506,69 @@ start_npu_engine() {
     NPU_API_ARGS+=(--npu-tokenizer "$tokd")
   done
   npu_memlock "$NPU_NEED_K" || exit 1
+  case "${HALOGEN_NPU_RESTARTS:-3}" in
+    ''|*[!0-9]*) echo "halogen npu: HALOGEN_NPU_RESTARTS=${HALOGEN_NPU_RESTARTS} is not a count" >&2; exit 1 ;;
+  esac
   NPU_OUT="${_hg_npu_out:-/tmp/halogen-npu.out}"
-  : > "$NPU_OUT"
-  "$bin" "${nargs[@]}" > >(tee -a "$NPU_OUT") &
-  NPU_PID=$!
+  NPU_BIN="$bin"; NPU_ARGS=("${nargs[@]}"); NPU_RESTARTS=0
   NPU_STOP=0
   trap 'NPU_STOP=1; kill -TERM "$NPU_PID" 2>/dev/null || true' TERM INT
+  rc=0; npu_launch || rc=$?
+  case "$rc" in
+    1) echo "halogen npu: the NPU engine exited before it was ready (rc=$NPU_RC; its own lines are above)" >&2
+       exit 1 ;;
+    2) exit 0 ;;
+  esac
+}
 
+npu_launch() {
   local t0=$SECONDS last=$SECONDS
+  : > "$NPU_OUT"
+  "$NPU_BIN" "${NPU_ARGS[@]}" > >(tee -a "$NPU_OUT") &
+  NPU_PID=$!
+  NPU_UP=$SECONDS
+
   until grep -q '^READY' "$NPU_OUT" 2>/dev/null; do
     if ! kill -0 "$NPU_PID" 2>/dev/null; then
-      rc=0; wait "$NPU_PID" 2>/dev/null || rc=$?
-      echo "halogen npu: the NPU engine exited before it was ready (rc=$rc; its own lines are above)" >&2
-      exit 1
+      NPU_RC=0; wait "$NPU_PID" 2>/dev/null || NPU_RC=$?
+      return 1
     fi
-    [ "$NPU_STOP" = 1 ] && exit 0
+    [ "$NPU_STOP" = 1 ] && return 2
     if [ $((SECONDS - last)) -ge 30 ]; then
       echo "halogen npu: still loading the NPU models ($((SECONDS - t0)) s)"
       last=$SECONDS
     fi
     sleep 0.2
   done
+  return 0
+}
+
+npu_exited_alone() {
+  [ "${HG_STOP:-0}" != 1 ] && [ -n "$NPU_PID" ] && ! kill -0 "$NPU_PID" 2>/dev/null &&
+    kill -0 "$ENGINE_PID" 2>/dev/null && kill -0 "$API_PID" 2>/dev/null &&
+    { [ -z "$WATCHDOG_PID" ] || kill -0 "$WATCHDOG_PID" 2>/dev/null; }
+}
+
+npu_again() {
+  local wrc="$1" max="${HALOGEN_NPU_RESTARTS:-3}" step="${_hg_npu_backoff:-5}" up rc
+  up=$((SECONDS - NPU_UP))
+  [ "$up" -ge 600 ] && NPU_RESTARTS=0
+  echo "halogen npu: the NPU engine exited (rc=$wrc) after ${up} s; the Flash engine serves on" >&2
+  while [ "$NPU_RESTARTS" -lt "$max" ]; do
+    NPU_RESTARTS=$((NPU_RESTARTS + 1))
+    echo "halogen npu: starting the NPU engine again in $((step * NPU_RESTARTS)) s (restart $NPU_RESTARTS of $max, HALOGEN_NPU_RESTARTS)" >&2
+    wd_sleep $((step * NPU_RESTARTS))
+    [ "${HG_STOP:-0}" = 1 ] && return 1
+    rc=0; npu_launch || rc=$?
+    case "$rc" in
+      0) echo "halogen npu: the NPU engine is serving again"; return 0 ;;
+      2) return 1 ;;
+    esac
+    echo "halogen npu: the NPU engine exited before it was ready (rc=$NPU_RC; its own lines are above)" >&2
+  done
+  NPU_PID=""
+  echo "halogen npu: the NPU engine stays down after $max restarts (HALOGEN_NPU_RESTARTS): its routes answer 503 until the container restarts; the Flash engine serves on. The device's side is in the host's kernel log (sudo dmesg | grep -i amdxdna)." >&2
+  return 0
 }
 
 start_npu_alone() {
@@ -1605,8 +1647,12 @@ all)
 
   set +e
 
-  WRC=0; wait -n "$ENGINE_PID" "$API_PID" $WATCHDOG_PID $NPU_PID || WRC=$?
-  all_takedown "$WRC"
+  while :; do
+
+    WRC=0; wait -n "$ENGINE_PID" "$API_PID" $WATCHDOG_PID $NPU_PID || WRC=$?
+    npu_exited_alone && npu_again "$WRC" && continue
+    all_takedown "$WRC"
+  done
   ;;
 bench|sweep)
   MODE="$1"

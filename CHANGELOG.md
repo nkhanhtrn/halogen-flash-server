@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.18.13
+
+Replies that are streaming keep moving while another request's long prompt is read in, a short
+request no longer waits behind one, and a fault on the NPU no longer takes the server down. The
+Flash checkpoints are unchanged. At temperature 0 each reply is byte-identical to 0.18.12's, to
+the same request alone and to serial greedy decode.
+
+### Changed
+
+- **Streaming replies keep moving while a long prompt is read in.** `HALOGEN_ADMIT_SPLICE_MS` is
+  now on by default (`500`, for every streaming reply: `HALOGEN_ADMIT_SPLICE_FOR=all`). Before,
+  every reply in progress paused for as long as one piece of a new long prompt took, which in our
+  tests was 18 to 22 seconds beside a 90,000-token prompt; now the longest pause is about one
+  second. The long prompt's own first token comes about 5 to 7 percent later while other replies
+  stream beside it. `HALOGEN_ADMIT_SPLICE_MS=0` restores the previous behaviour.
+- **A short request starts while a long prompt is read in** (`HALOGEN_ADMIT_NEST=1`, the default).
+  A request of up to 1,024 new tokens (`HALOGEN_ADMIT_NEST_MAX`) that arrives during another
+  request's long prompt is read in at once instead of waiting for that piece (up to about 20
+  seconds for a 32,768-token piece); in our tests the slowest such first token came in 0.6 to 1.3
+  seconds. It holds about 0.33 GiB more pinned host memory and 32 MiB of GPU memory from start-up. `HALOGEN_ADMIT_NEST=0` turns it off.
+- **The NPU model sets were republished** with more of their start-up moved onto the faster path;
+  every NPU request saves a few more milliseconds, and the answers are unchanged. This image
+  fetches them by itself (`HALOGEN_DOWNLOAD`).
+
+### Fixed
+
+- **A fault on the NPU no longer takes the server down** (towards #196, reported by @cannibal3004).
+  When an NPU command did not complete, the NPU engine used to refuse every later request of that
+  size ("bad command state, can't launch"), and could stop the whole container. Now it answers
+  busy (503) and exits, and the server starts it again by itself, up to `HALOGEN_NPU_RESTARTS`
+  times (default 3), while the Flash model keeps serving.
+
 ## 0.18.12
 
 Prompts and generation run a little faster, every NPU model starts its work sooner, and image edits
