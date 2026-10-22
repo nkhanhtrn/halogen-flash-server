@@ -37,6 +37,7 @@ what that leaves for anything else.
 - [Bring your own GGUF](gguf.md)
 - [Small models on the NPU](npu-small-models.md) and the
   [NPU host details](NPU.md)
+- [Flint preview](flint-preview.md): RecursiveSI's Flint on its own image tag
 
 **Understanding the numbers:**
 

@@ -131,6 +131,7 @@ podman run --rm -p 8731:8731 \
 
 It is a preview: prefill slows past roughly 80-90k tokens of context, and
 speculative decoding is opt-in (`HALOGEN_FLINT_SPEC=1`) and greedy-only.
+Speeds, options and limits: [Flint preview](docs/flint-preview.md).
 
 ---
 
