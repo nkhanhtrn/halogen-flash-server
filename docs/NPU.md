@@ -2,7 +2,7 @@
 
 The server can run small models on the Ryzen AI NPU beside the Flash model, behind the same port. Name them in
 `HALOGEN_NPU_MODELS`, and a request picks one by its `model`. Every other request goes to the Flash model, as before.
-Eight kinds of model run there:
+Nine kinds of model run there:
 
 - **Decisions** with `decider-0.8b` (a Qwen3.5-0.8B classifier). Give a text and a question with 2 to 10 options, and
   get a probability for every option from one pass.
@@ -22,6 +22,8 @@ Eight kinds of model run there:
   `/v1/images/edits`.
 - **Speech to text** with `qwen3-asr-0.6b` or `qwen3-asr-1.7b` (Qwen3-ASR). Recordings up to 20 minutes, on
   `/v1/audio/transcriptions`.
+- **Text to speech** with `qwen3-tts-0.6b-customvoice` or `qwen3-tts-1.7b-customvoice` (Qwen3-TTS CustomVoice). Nine
+  preset voices, on `/v1/audio/speech`.
 
 Larger sizes of the first three are named the same way (see [Larger sizes](#larger-sizes)). Your own fine-tune of any of the first four runs too. See [Your own model](#your-own-model).
 
@@ -62,7 +64,7 @@ podman run --rm -p 8731:8731 \
   -e HALOGEN_DOWNLOAD=peonist-ai/halogen-qwen3.8-flash-next \
   -e HALOGEN_NPU_MODELS=decider-0.8b,qwen3-embedding-0.6b,qwen3-reranker-0.6b,qwen3guard-gen-0.6b,qwen3.5-2b \
   -v ~/halogen-models:/models \
-  ghcr.io/peonist-ai/halogen-flash-server:0.18.13
+  ghcr.io/peonist-ai/halogen-flash-server:0.18.14
 ```
 
 `HALOGEN_DOWNLOAD` fetches the files of the NPU models that `HALOGEN_NPU_MODELS` names, into `/models/npu`, and the
@@ -75,7 +77,8 @@ starts no NPU engine.
 
 The NPU models' files stay in memory beside the Flash model's, a few GB in all, about 8 GB more with
 `flux2-klein-4b`, about 1.6 GB more with `qwen3-asr-0.6b`, about 4 GB with `qwen3-asr-1.7b`, about 1.1 GB with
-`embeddinggemma-2` and about 0.8 GB with `qwen3guard-stream-0.6b`. The Flash model runs somewhat slower
+`embeddinggemma-2`, about 0.8 GB with `qwen3guard-stream-0.6b`, and about 4 GB with `qwen3-tts-0.6b-customvoice` or
+about 5 GB with `qwen3-tts-1.7b-customvoice`. The Flash model runs somewhat slower
 while the NPU works, since the two share the memory bus and the chip's power budget.
 
 ## Larger sizes
@@ -452,6 +455,38 @@ While the models take turns, the kernel log (`dmesg`) can show `amdxdna` error l
 `Failed to alloc dev bo memory, ret -28`. They mean the driver turned down a first try. The server recovers by itself,
 and the answers are unaffected.
 
+## Text to speech
+
+Name `qwen3-tts-0.6b-customvoice` or `qwen3-tts-1.7b-customvoice` in `HALOGEN_NPU_MODELS` and it is fetched and served.
+It speaks a text on `/v1/audio/speech`, in OpenAI's request shape:
+
+```
+curl -s localhost:8731/v1/audio/speech -H 'Content-Type: application/json' \
+  -d '{"model": "qwen3-tts-1.7b-customvoice", "input": "Hello from the NPU.", "voice": "ryan"}' -o hello.wav
+```
+
+- `voice`: one of the nine preset voices, `aiden`, `dylan`, `eric`, `ono_anna`, `ryan`, `serena`, `sohee`, `uncle_fu`
+  and `vivian`.
+- `input`: up to 4,096 characters. One request speaks for about two and a half minutes at most, so split a longer text.
+- `language`: optional, `auto` (the default) or one of `chinese`, `english`, `french`, `german`, `italian`, `japanese`,
+  `korean`, `portuguese`, `russian`, `spanish`, `beijing_dialect` and `sichuan_dialect`.
+- `response_format`: `wav` (the default here) or `pcm` (16-bit mono at 24 kHz). `mp3` and the other compressed formats
+  are refused.
+- `stream`: with `pcm`, the audio comes as it is made.
+- `instructions`: how to speak it, for example "read this like a calm audiobook narrator". The 1.7B takes it, and the
+  0.6B refuses it.
+- `seed`: optional, the same audio again for the same request. A `speed` other than 1 is refused.
+
+The talker runs on the NPU and the audio is decoded on the CPU. On a Strix Halo the 0.6B speaks about 1.5 times faster
+than real time and the 1.7B a little faster than real time, with the first audio in about 0.3 and 0.4 seconds. One
+text-to-speech model is served at a time.
+
+The NPU speaks one request at a time, and the other NPU models' requests wait until the speech in progress is done,
+the streaming guard's checks among them: a guarded reply that streams beside a long speech request can end before the
+guard has read it, and its end event says so. With `HALOGEN_NPU_SPLICE=1`, a short request to another NPU model (a
+decision, an embedding, a rerank or a moderation of up to 1,024 tokens) runs between two frames instead, in a fraction
+of a second; under a heavy mix of NPU requests that setting also delays the streaming guard, so it is off by default.
+
 <a id="your-own-model"></a>
 ## Your own model
 
@@ -510,6 +545,7 @@ changes no result.
   so an answer stops there at the latest.
 - A decision takes 2 to 10 options (`d3-lite` and `d3-nano`: 1 to 255).
 - A transcription takes a WAV file of up to 20 minutes or 25 MiB.
+- A speech request takes up to 4,096 characters and speaks for about two and a half minutes at most.
 - With several large NPU models loaded (a speech model, `embeddinggemma-2`, `wemm-embedding-4b`, images above
   512x512, `d3-lite` and `d3-nano` together), they take turns at the NPU's memory. Alternating them is slower, and a request that cannot fit answers 503.
 - The NPU models are served in the default mode only, not in the two-container setup (`engine` and `api`).
@@ -524,6 +560,12 @@ changes no result.
 - **The NPU firmware.** The driver package or `linux-firmware` installs it.
 - **The IOMMU on.** The NPU driver needs it. `amd_iommu=off`, which the README measures for GPU prefill, turns the NPU
   off. `iommu=pt` keeps it.
+
+**A known bad pairing: AMD's DKMS driver 2.23 with its XRT 2.23.** On it the NPU can stop every few hundred passes
+(`aie2_tdr_work: Device isn't making progress` in `dmesg`, and `command state 8` in the request's error). On the same
+host, the kernel's own driver with Ubuntu 26.04's XRT ran the same load clean. Use that, or AMD's 2.25. After such a
+fault the server starts the NPU engine again by itself, up to `HALOGEN_NPU_RESTARTS` times (3), while the Flash model
+keeps serving.
 
 **Where your XRT lives.** The container needs three XRT libraries from the host: `libxrt_coreutil.so.2`,
 `libxrt_core.so.2` and the NPU plugin `libxrt_driver_xdna.so.2`. AMD's packages put XRT in `/opt/xilinx/xrt`, and the

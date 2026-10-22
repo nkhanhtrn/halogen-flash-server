@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.18.14
+
+Text to speech on the NPU, and a long answer the prompt cache had cut short now gets the room it asked for.
+Generation is a little faster. The Flash checkpoints are unchanged. At temperature 0 each reply is byte-identical to
+0.18.13's, to the same request alone and to serial greedy decode.
+
+### Added
+
+- **Text to speech on the NPU (#183).** Qwen3-TTS-12Hz CustomVoice, 0.6B and 1.7B, with its nine preset voices, on
+  `/v1/audio/speech` (OpenAI's request shape: wav or pcm, or pcm streamed as it is made). The 1.7B also takes a speaking
+  style in `instructions`. The talker runs on the NPU and the audio is decoded on the CPU, so the GPU stays with the LLM.
+  On a Strix Halo the 0.6B speaks about 1.5 times faster than real time and the 1.7B a little faster than real time,
+  with the first audio in about 0.3 and 0.4 seconds. Name `qwen3-tts-0.6b-customvoice` or `qwen3-tts-1.7b-customvoice`
+  in `HALOGEN_NPU_MODELS`. Other NPU requests wait while a speech request is spoken (see docs/NPU.md). Thanks to
+  @0x62ash for the request.
+
+### Changed
+
+- **Generation is a little faster** on both checkpoints, at the same output
+  ([measured](docs/performance.md#measured)).
+- **Opt-in: a short NPU request can run between a long one's steps** (`HALOGEN_NPU_SPLICE=1`). A decision,
+  embedding, rerank or moderation request of up to 1,024 tokens that arrives while another NPU model generates an image,
+  transcribes a recording, speaks or generates text then runs in a fraction of a second instead of waiting up to about
+  20 seconds. It is off by default because under a heavy mix of NPU requests it delays the streaming guard.
+- **The decision models' sets were republished** (`decider-0.8b`, `d3-lite`, `d3-nano`): decisions over prompts of 65 to
+  128 tokens are faster, and the answers are unchanged. This image fetches them by itself (`HALOGEN_DOWNLOAD`).
+
+### Fixed
+
+- **A long answer is no longer cut short by the prompt cache** (reported on Reddit). When the server lowered a request's
+  `max_tokens` to the room its conversation had left (the log's warning), the answer stopped there even though the
+  memory held by idle cached conversations could have carried it. Now an answer that reaches that point gets more room,
+  from free space or from the oldest idle conversations, up to what the request asked for. `HALOGEN_POOL_GROW=0`
+  restores the previous behaviour.
+
 ## 0.18.13
 
 Replies that are streaming keep moving while another request's long prompt is read in, a short

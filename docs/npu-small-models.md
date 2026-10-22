@@ -5,9 +5,11 @@ model and behind the same port: decisions (`decider-0.8b`), embeddings
 (`qwen3-embedding-0.6b`), reranking (`qwen3-reranker-0.6b`), moderation
 (`qwen3guard-gen-0.6b`, on `/v1/moderations`), text generation for
 summaries and other short jobs (`qwen3.5-2b`, on `/v1/chat/completions`),
-images up to 1024x1024 (`flux2-klein-4b`, on `/v1/images/generations`) and
+images up to 1024x1024 (`flux2-klein-4b`, on `/v1/images/generations`),
 speech to text (`qwen3-asr-0.6b` or `qwen3-asr-1.7b`, on
-`/v1/audio/transcriptions`), or your own fine-tune of one of the first four.
+`/v1/audio/transcriptions`) and text to speech (`qwen3-tts-0.6b-customvoice`
+or `qwen3-tts-1.7b-customvoice`, on `/v1/audio/speech`), or your own
+fine-tune of one of the first four.
 Add the NPU to the Quickstart's command:
 
 ```

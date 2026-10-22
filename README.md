@@ -56,8 +56,8 @@ a quality trade. Since 0.6.0 there are two draft sources, the model's own
 draft head and the request's own text (prompt lookup), and the guarantee
 covers both.
 
-0.18.13: replies keep streaming while another request's long prompt is read in, a short request
-starts at once beside one, and a fault on the NPU no longer stops the server; output unchanged.
+0.18.14: text to speech on the NPU, a long answer the prompt cache had cut short gets the room it
+asked for, and generation is a little faster; output unchanged.
 [Measured](docs/performance.md#measured).
 
 Since 0.7.0 the engine also opens a **llama.cpp GGUF** of this model directly:
@@ -105,7 +105,7 @@ podman run --rm -p 8731:8731 \
   --ipc=host --ulimit memlock=-1:-1 \
   -e HALOGEN_DOWNLOAD=peonist-ai/halogen-qwen3.8-flash-next \
   -v ~/halogen-models:/models \
-  ghcr.io/peonist-ai/halogen-flash-server:0.18.13
+  ghcr.io/peonist-ai/halogen-flash-server:0.18.14
 ```
 
 One condition first: **set the BIOS carve-out (UMA frame buffer) to its
