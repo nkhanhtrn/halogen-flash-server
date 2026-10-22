@@ -113,6 +113,25 @@ minimum**, not Auto: this engine wants host RAM, not dedicated VRAM. The
 [Quickstart](docs/getting-started.md) covers that, Docker, the compose
 file, and upgrading from an older checkpoint.
 
+### Flint preview
+
+A separate image serves RecursiveSI's Flint (40B mixture-of-experts, about
+2B active, Apache-2.0) as a preview; `:latest` above is unchanged. On first
+start it downloads the int4 weights (about 21 GB) into `~/halogen-models` and
+checks them against the tested revision:
+
+```bash
+podman run --rm -p 8731:8731 \
+  --device /dev/kfd --device /dev/dri --group-add keep-groups \
+  --ipc=host --ulimit memlock=-1:-1 \
+  -e HALOGEN_SERVE_MODEL=flint \
+  -v ~/halogen-models:/models \
+  ghcr.io/peonist-ai/halogen-flash-server:0.18.14-flint-preview
+```
+
+It is a preview: prefill slows past roughly 80-90k tokens of context, and
+speculative decoding is opt-in (`HALOGEN_FLINT_SPEC=1`) and greedy-only.
+
 ---
 
 ## Community
