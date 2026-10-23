@@ -97,10 +97,13 @@ also streams a 47 GiB lookup table through the same file cache on every
 request, so when the host is short the kernel reclaims weight pages to make
 room for table rows, and the GPU driver has to tear down and restore the
 engine's mapping each time. That cycle is what the stalls in issue #85 and
-the read faults in issue #83 look like from the outside. With the flag set
-the server `mlock`s every weight page it registers (never the table), which
-takes the weights out of that cycle entirely: the kernel cannot reclaim
-them, and the pressure lands somewhere visible instead.
+the read faults in issue #83 look like from the outside, and each request
+line's `GPU queues evicted N ms` (`halogen:gpu_queues_evicted_seconds_total`
+in `/metrics`) counts the time it costs. With the flag set the server
+`mlock`s every weight page it registers (never the table), so the kernel
+cannot reclaim them, and the pressure lands somewhere visible instead. The
+kernel can still move locked pages to compact memory, which costs the same
+cycle, unless the host turns that off (below).
 
 Measured both ways on two machines:
 
@@ -139,10 +142,21 @@ to `/etc/security/limits.conf` (or a file under `/etc/security/limits.d/`),
 log in again, and start the container from that login. The container says so
 at startup when it can see the limit is short, the engine says so again if
 the lock fails, and it runs unlocked either way. It is opt-in until the
-reporters on those two issues have run it. Memory the kernel can move by
-compaction is not held still by this flag; if that turns out to matter, the
-next step is a pinned allocation, and it will be a different value of the
-same flag.
+reporters on those two issues have run it.
+
+To stop compaction from moving the locked weights, set this on the host
+(it lasts until a reboot unless you also put it in a file under
+`/etc/sysctl.d/`):
+
+```
+sudo sysctl vm.compact_unevictable_allowed=0
+```
+
+Holding the weights in a pinned allocation instead was measured as well and
+made things worse: about five times the queue-eviction time on a fragmented
+test host, because everything else then has to move around a fixed 62 GiB
+block. The lock with that setting is what takes the weights out of the
+cycle.
 
 ### `HALOGEN_FLASH_PIN_TRUNK=0`: last resort, w4b only
 
@@ -160,7 +174,8 @@ settings at all (the first request ended the server with `internal sizing error 
 
 ## If you must share it
 
-The weights (about 62 GiB, 68 with w4b) are pinned and do not move.
+The weights take about 62 GiB (68 with w4b) whatever you set. They are file
+cache the kernel can reclaim or move unless you lock them (above).
 Everything else the server takes is decided by three settings, so sharing
 the machine means choosing how much of the other half you keep. What each
 configuration takes is the engine's own fit arithmetic (the same model the
