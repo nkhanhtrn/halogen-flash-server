@@ -29,8 +29,8 @@ Measured on Strix Halo (Ryzen AI Max+ 395, 128 GB), int4 weights, one request at
 
 | | tokens/s |
 |---|---|
-| decode, 1k-2k context | ~97-98 (short prompts ~103) |
-| decode, 32k context | ~67-70 |
+| decode, 1k-2k context | ~110 (short prompts ~115-119) |
+| decode, 32k context | ~75 |
 | four requests at once, total | ~190 |
 | prefill, 2k / 32k prompt | ~3,700 / ~2,450 |
 | follow-up turn at 32k context (cached) | ~0.4 s to the first token |
