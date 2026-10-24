@@ -7,14 +7,19 @@ docs_dir: docs
 
 theme:
   name: material
+  font: false
+  logo: assets/medallion.jpg
+  favicon: assets/medallion.jpg
   palette:
-    - scheme: default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: black
       accent: deep orange
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
-    - scheme: slate
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       primary: black
       accent: deep orange
       toggle:
@@ -28,6 +33,9 @@ theme:
     - toc.follow
     - search.share
     - content.code.copy
+
+extra_css:
+  - stylesheets/halogen.css
 
 markdown_extensions:
   - admonition
