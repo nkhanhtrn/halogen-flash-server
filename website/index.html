@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>halogen™ | Serving the local frontier</title><meta name="description" content="halogen is a local inference server for Qwen3.8-Flash-Next on AMD Strix Halo, with small models on the NPU, behind one OpenAI-compatible port.">
+<meta name="color-scheme" content="dark light"><script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script><link rel="preload" href="assets/fonts/Cinzel.ttf" as="font" type="font/ttf" crossorigin><link rel="stylesheet" href="style.css"></head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><a class="brand" href="index.html" aria-label="halogen, home"><span class="medal" role="img" aria-label="halogen medallion"></span><b>halogen</b></a>
+<div class="hr"><nav class="main" aria-label="Main"><ul><li><a href="benchmarks.html">Benchmarks</a></li><li><a href="models.html">Models</a></li><li><a href="https://peonist-ai.github.io/halogen-flash-server/">Docs</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li></ul></nav><button class="theme" type="button" hidden aria-label="Switch theme"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><details class="menu"><summary>Menu</summary><nav aria-label="Main, small screens"><ul><li><a href="benchmarks.html">Benchmarks</a></li><li><a href="models.html">Models</a></li><li><a href="https://peonist-ai.github.io/halogen-flash-server/">Docs</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li></ul></nav></details></div></div></header>
+<main id="main">
+
+<section class="hero"><div class="wrap">
+<div class="copy">
+<h1>Serving the local frontier.</h1>
+<p class="lede"><strong>halogen™</strong> is local inference that behaves like a frontier API. Qwen3.8-Flash-Next and a set of small NPU models, served from one AMD Strix Halo machine over the APIs your agents already speak.</p>
+<div class="panel"><span class="c1"></span><span class="c2"></span><div class="bar"><span>Release 0.18.15</span><button class="copy-btn" type="button" data-target="run">Copy</button></div><pre id="run" tabindex="0"><code>mkdir -p ~/halogen-models
+
+podman run --rm -p 8731:8731 \
+  --device /dev/kfd --device /dev/dri --group-add keep-groups \
+  --ipc=host --ulimit memlock=-1:-1 \
+  -e HALOGEN_DOWNLOAD=peonist-ai/halogen-qwen3.8-flash-next \
+  -v ~/halogen-models:/models \
+  ghcr.io/peonist-ai/halogen-flash-server:0.18.15</code></pre></div>
+<p class="note">Set the BIOS carve-out (UMA frame buffer) to its minimum, not Auto: this engine wants host RAM, not dedicated VRAM. The weights, about 111 GiB, are fetched on first start. The server answers on port 8731, OpenAI-compatible.</p>
+<p class="quiet"><a href="https://peonist-ai.github.io/halogen-flash-server/getting-started/">Read the Quickstart</a></p>
+</div>
+<div class="art"><div class="emb" role="img" aria-label="The halogen emblem: a ring of brass around carved stone, with glowing red runes"></div></div>
+</div></section>
+
+<section class="stats" aria-labelledby="nums"><div class="wrap">
+<h2 id="nums" class="kicker" style="font-size:.8rem;font-family:var(--display);letter-spacing:.2em">Measured</h2>
+<div class="row">
+<div class="tip"><i></i><i></i><i></i><i></i><span class="l">An agent turn, start to last byte</span><span class="n">4.2<small> s</small></span><span class="c">Context of 30,000 to 96,000 tokens. Median of 115 turns, about 200 tokens of answer each.</span></div>
+<div class="tip"><i></i><i></i><i></i><i></i><span class="l">Prefill, 8,192-token prompt</span><span class="n">1,821<small> tok/s</small></span><span class="c">The image's own <code>sweep</code>, synthetic prompt, prompt cache off.</span></div>
+<div class="tip"><i></i><i></i><i></i><i></i><span class="l">Decode, repetitive output</span><span class="n">up to 94<small> tok/s</small></span><span class="c">73 writing code, 54 prose. Decode depends on how predictable the text is.</span></div>
+</div>
+<p class="cond">All three: published 0.18.0 image, default configuration (v2 checkpoint, prompt cache on, greedy, thinking off), AMD Ryzen AI Max+ 395, 128 GB, about 85 W of sustained package power. The agent turns are three sessions of a coding agent fixing a bug in a Python repository, on the client's clock. <a href="benchmarks.html">Every table, with its conditions</a></p>
+</div></section>
+
+<section class="blk" style="padding-top:var(--gap)"><div class="divider" aria-hidden="true"><i></i><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l9 12-9 12-9-12z"/><path d="M14 8v12M10 12l4 3 4-3"/></svg><i></i></div></section>
+
+<section class="blk" aria-labelledby="agents"><div class="wrap two">
+<div class="l"><p class="kicker">One port</p><h2 id="agents">Built for agents</h2><p style="margin-top:20px" class="mute">The APIs your harness already speaks, on one port.</p>
+<p class="more small"><a href="https://peonist-ai.github.io/halogen-flash-server/agent-harness/">From an agent harness</a><br><a href="https://peonist-ai.github.io/halogen-flash-server/classifier/">Using it as a classifier</a></p></div>
+<div class="r"><dl class="defs">
+<div><dt>OpenAI API</dt><dd><code class="ep">/v1</code><p>Chat Completions and Completions, streaming, tool calls, structured output.</p><a href="https://peonist-ai.github.io/halogen-flash-server/api/">API reference</a></dd></div>
+<div><dt>Codex and Responses</dt><dd><code class="ep">/v1/responses</code><p>The OpenAI Responses API. Point the Codex CLI at the server and it works, tool calls included.</p><a href="https://peonist-ai.github.io/halogen-flash-server/codex/">Codex guide</a></dd></div>
+<div><dt>Claude Code and Messages</dt><dd><code class="ep">/v1/messages</code><p>The Anthropic Messages API, built from what Claude Code actually sends.</p><a href="https://peonist-ai.github.io/halogen-flash-server/claude-code/">Claude Code guide</a></dd></div>
+<div><dt>Sessions: keep, fork, join</dt><dd><p>A harness that runs several branches from one conversation can keep its state under a name and start new requests from it.</p><a href="https://peonist-ai.github.io/halogen-flash-server/sessions/">Sessions</a></dd></div>
+</dl></div></div></section>
+
+<section class="blk" aria-labelledby="npu"><div class="wrap two">
+<div class="l"><p class="kicker">Ryzen AI NPU</p><h2 id="npu">On the NPU, same port</h2><p style="margin-top:20px" class="mute">Small models run beside the Flash model. A request picks one by its <code>model</code>. Leave <code>HALOGEN_NPU_MODELS</code> out and nothing changes.</p>
+<p class="more small"><a href="models.html">The full roster</a><br><a href="https://peonist-ai.github.io/halogen-flash-server/npu-small-models/">Small models on the NPU</a></p></div>
+<div class="r"><ul class="tasks">
+<li><b>Decide</b><span><a href="models.html#decide"><code>decider-0.8b</code> <code>d3-lite</code> <code>d3-nano</code></a></span></li>
+<li><b>Embed</b><span><a href="models.html#embed"><code>qwen3-embedding-0.6b</code> <code>embeddinggemma-2</code></a></span></li>
+<li><b>Rerank</b><span><a href="models.html#rerank"><code>qwen3-reranker-0.6b</code></a></span></li>
+<li><b>Moderate</b><span><a href="models.html#moderate"><code>qwen3guard-gen-0.6b</code> <code>qwen3guard-stream-0.6b</code></a></span></li>
+<li><b>Text</b><span><a href="models.html#text"><code>qwen3.5-2b</code></a></span></li>
+<li><b>Images</b><span><a href="models.html#images"><code>flux2-klein-4b</code></a></span></li>
+<li><b>Speech to text</b><span><a href="models.html#stt"><code>qwen3-asr-0.6b</code> <code>qwen3-asr-1.7b</code></a></span></li>
+<li><b>Text to speech</b><span><a href="models.html#tts"><code>qwen3-tts-0.6b-customvoice</code> <code>qwen3-tts-1.7b-customvoice</code></a></span></li>
+</ul></div></div></section>
+
+<section class="blk" style="padding-top:var(--gap)"><div class="divider" aria-hidden="true"><i></i><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l9 12-9 12-9-12z"/><path d="M14 8v12M10 12l4 3 4-3"/></svg><i></i></div></section>
+
+<section class="blk" aria-labelledby="patch"><div class="wrap two">
+<div class="l"><p class="kicker">From the changelog</p><h2 id="patch">Patch notes</h2><p style="margin-top:20px" class="mute">Newest first. The changelog gives release numbers, not dates.</p><p class="more small"><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">The whole changelog</a></p></div>
+<div class="r"><ol class="timeline">
+<li><h3>0.18.15</h3><p>Long answers no longer stop inside a code block, and a request whose client has gone no longer holds up the requests behind it. The Flash checkpoints are unchanged.</p></li>
+<li><h3>0.18.14</h3><p>Text to speech on the NPU, and a long answer the prompt cache had cut short now gets the room it asked for. Generation is a little faster. The Flash checkpoints are unchanged. At temperature 0 each reply is byte-identical to 0.18.13's, to the same request alone and to serial greedy decode.</p></li>
+<li><h3>0.18.13</h3><p>Replies that are streaming keep moving while another request's long prompt is read in, a short request no longer waits behind one, and a fault on the NPU no longer takes the server down. The Flash checkpoints are unchanged.</p></li>
+</ol></div></div></section>
+
+<section class="blk" aria-labelledby="req"><div class="wrap">
+<div class="sysreq"><span class="c1"></span><span class="c2"></span>
+<h2 id="req">System requirements</h2>
+<div class="hd" aria-hidden="true"><span>Required</span><span>Notes</span></div>
+<dl>
+<div class="rw"><dt>Machine</dt><dd><p>An AMD Strix Halo machine: Ryzen AI Max+ 395, 128 GB. One GPU, gfx1151 only; the build rejects other architectures. Built to own its machine: the weights stay resident and the KV pool is reserved up front, which on a 128 GB machine leaves roughly twelve gigabytes free.</p></dd></div>
+<div class="rw"><dt>Operating system</dt><dd><p>Native Linux only. WSL2 is not a supported host.</p></dd></div>
+<div class="rw"><dt>Kernel</dt><dd><p>AMD's two gfx1151 fixes to the KFD driver, with <code>CONFIG_HSA_AMD_SVM</code> built in. AMD's floor is Linux 6.18.4, Ubuntu 24.04 HWE <code>6.17.0-19.19~24.04.2</code>, or Ubuntu 24.04 OEM <code>6.14.0-1018</code>, each or later.</p></dd></div>
+<div class="rw"><dt>BIOS</dt><dd><p>The UMA frame buffer (dedicated graphics memory) at its smallest explicit value, not Auto.</p></dd></div>
+<div class="rw"><dt>Containers</dt><dd><p>Podman with <code>--group-add keep-groups</code>. On Docker, use <code>--group-add video --group-add render</code> instead.</p></dd></div>
+<div class="rw"><dt>Disk</dt><dd><p>The first start fetches the weights, about 111 GiB.</p></dd></div>
+<div class="rw"><dt>NPU models (optional)</dt><dd><p>The NPU driver, XRT with its NPU plugin, the NPU firmware, and the IOMMU on. The GPU's fabric clock held at its top speed, or the server refuses to start and prints the commands for your machine.</p></dd></div>
+</dl>
+<p class="src">Sources: <a href="https://peonist-ai.github.io/halogen-flash-server/troubleshooting/#the-host-settings-these-numbers-were-measured-on">host settings</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/host-setup/">a machine of its own</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/NPU/">NPU host details</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/getting-started/">Quickstart</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/limits/">limits</a>.</p>
+</div></div></section>
+
+</main>
+<footer class="site"><div class="wrap">
+<ul><li><a href="https://peonist-ai.github.io/halogen-flash-server/">Documentation</a></li><li><a href="https://peonist-ai.github.io/halogen-flash-server/getting-started/">Quickstart</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/issues">Issues</a></li><li><a href="https://discord.gg/bcm6QknaV6">Discord</a></li></ul>
+<p>halogen is a product of Peonist, LLC. It is distributed as a container image under an end user license agreement: <a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/LICENSE.md">LICENSE.md</a>. "halogen" and "Peonist" are trademarks of Peonist, LLC: <a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/TRADEMARKS.md">TRADEMARKS.md</a>.</p>
+</div></footer>
+<script>
+document.querySelectorAll(".copy-btn").forEach(function(b){b.addEventListener("click",function(){var t=document.getElementById(b.getAttribute("data-target")).innerText;var d=function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy"},1600)};if(navigator.clipboard){navigator.clipboard.writeText(t).then(d)}})});
+</script>
+<script>
+(function(){var b=document.querySelector(".theme"),r=document.documentElement,m=matchMedia("(prefers-color-scheme: light)");
+function cur(){return r.getAttribute("data-theme")||(m.matches?"light":"dark")}
+function set(){var c=cur();b.setAttribute("data-mode",c);b.setAttribute("aria-label","Switch to "+(c=="light"?"dark":"light")+" mode")}
+b.hidden=false;set();
+b.addEventListener("click",function(){var n=cur()=="light"?"dark":"light";r.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(e){}set()});
+if(m.addEventListener)m.addEventListener("change",set)})();
+</script>
+</body></html>
