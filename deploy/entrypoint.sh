@@ -5,6 +5,24 @@ set -euo pipefail
 export HSA_DISABLE_COREDUMP_ON_EXCEPTION="${HSA_DISABLE_COREDUMP_ON_EXCEPTION:-1}"
 ulimit -c 0
 
+oom_adj_raise() {
+  local want="${HALOGEN_OOM_SCORE_ADJ:-500}" f="${_hg_proc:-/proc}/$$/oom_score_adj" cur
+  case "$want" in
+    0) return 0 ;;
+    ''|*[!0-9]*) echo "halogen: HALOGEN_OOM_SCORE_ADJ=$want is not 0..1000; left as inherited" >&2; return 0 ;;
+  esac
+  if [ "$want" -gt 1000 ]; then echo "halogen: HALOGEN_OOM_SCORE_ADJ=$want is not 0..1000; left as inherited" >&2; return 0; fi
+  cur=$(cat "$f" 2>/dev/null) || return 0
+  case "$cur" in ''|*[!0-9-]*) return 0 ;; esac
+  [ "$cur" -ge "$want" ] && return 0
+  if echo "$want" > "$f" 2>/dev/null; then
+    echo "halogen: oom_score_adj $cur -> $want: if the host runs out of memory, the kernel ends this server before the desktop session or the container runtime (HALOGEN_OOM_SCORE_ADJ=0 leaves it)" >&2
+  else
+    echo "halogen: NOTE could not raise oom_score_adj from $cur (read-only /proc?); a host out of memory may end other processes first" >&2
+  fi
+}
+oom_adj_raise
+
 ENG_PORT="${HALOGEN_PORT:-8730}"
 API_PORT="${HALOGEN_API_PORT:-8731}"
 BIND="${HALOGEN_BIND:-127.0.0.1}"
@@ -120,8 +138,19 @@ kv_budget_note() {
          "including the large lookup table it reads from disk and never holds. MemAvailable now ${avail_gib} GiB."
   fi
 
-  awk -v kv="$kv_gib" -v cg="$cache_gib" -v av="$avail_gib" -v w="$w_gib" 'BEGIN{ if (av != "?" && kv+cg+w+16 > av)
-    print "halogen: WARNING: that budget is close to or over what this host has free (the engine refuses the last pin under 16 GiB of MemAvailable).\n  If startup ends in \"checkpoint: refusing to pin\" or \"HIP ... out of memory\", lower HALOGEN_MAX_TOK to 16384 (the working memory, about 4 GiB back on the default checkpoint and 1.6 on w4b, for about 9% of prefill speed)\n  or HALOGEN_KV_POOL_POSITIONS (the pool, ~29.5 KiB a position); a 1,048,576-position pool fits only with HALOGEN_MAX_TOK=16384." > "/dev/stderr" }'
+  awk -v kv="$kv_gib" -v cg="$cache_gib" -v av="$avail_gib" -v w="$w_gib" -v pp="$KV_PP" -v k8="${HALOGEN_KV8:-}" 'BEGIN{ if (av != "?" && kv+cg+w+16 > av)
+    printf "halogen: WARNING: that budget is close to or over what this host has free (the engine refuses the last pin under 16 GiB of MemAvailable).\n  If startup ends in \"checkpoint: refusing to pin\" or \"HIP ... out of memory\", lower HALOGEN_MAX_TOK to 16384 (the working memory, about 4 GiB back on the default checkpoint and 1.6 on w4b, for about 9%% of prefill speed)\n  or HALOGEN_KV_POOL_POSITIONS (the pool, ~%.1f KiB a position); a %s-position pool fits only with HALOGEN_MAX_TOK=16384.\n", pp / 1024, (k8 == "1") ? "2,097,152" : "1,048,576" > "/dev/stderr" }'
+
+  local npu_b=0 npu_gib fl
+  command -v npu_host_bytes >/dev/null 2>&1 && npu_b=$(npu_host_bytes)
+  if [ "${npu_b:-0}" -gt 0 ]; then
+    npu_gib=$(awk -v b="$npu_b" 'BEGIN{printf "%.1f", b / 1073741824}')
+    fl="${HALOGEN_NPU_HOST_FLOOR_GIB:-4}"
+    echo "halogen: NPU models: up to about ${npu_gib} GiB of host memory as they are used (the size of their files, pinned), on top of the budget above."
+    awk -v kv="$kv_gib" -v cg="$cache_gib" -v av="$avail_gib" -v w="$w_gib" -v npu="$npu_gib" -v fl="$fl" 'BEGIN{ if (av != "?" && kv+cg+w+npu+fl > av)
+      printf "halogen: WARNING: with these NPU models the host does not have room for everything once it is in use: %.1f GiB for the Flash model (weights, pool, prompt cache) and %.1f for the NPU models against %.1f GiB available now.\n  Pinned memory cannot be swapped, so the host runs out of memory. Name fewer models in HALOGEN_NPU_MODELS, or lower HALOGEN_KV_POOL_POSITIONS.\n%s", kv+cg+w, npu, av,
+        (fl + 0 > 0) ? sprintf("  The NPU engine answers 503 instead of taking a new buffer while MemAvailable is under %s GiB (HALOGEN_NPU_HOST_FLOOR_GIB).\n", fl) : "" > "/dev/stderr" }'
+  fi
 }
 
 gguf_file_type() {
@@ -968,6 +997,9 @@ memlock_note() {
   fi
 }
 
+[ -n "${HALOGEN_FORK+x}" ] || export HALOGEN_FORK=1
+[ -n "${HALOGEN_FORK_MAP+x}" ] || [ "$HALOGEN_FORK" != 1 ] || export HALOGEN_FORK_MAP=auto
+
 FE_ONLY_FLAGS="HALOGEN_API_KEY HALOGEN_API_KEY_FILE HALOGEN_CLIENT_MARKERS HALOGEN_ENABLE_THINKING HALOGEN_ENGINE_PING_S HALOGEN_ENGINE_PROBE_S \
 HALOGEN_FREQUENCY_PENALTY HALOGEN_KEEPALIVE_TIMEOUT HALOGEN_MAX_THINKING_TOKENS \
 HALOGEN_MAX_TOKENS_DEFAULT HALOGEN_MIN_P HALOGEN_MODEL_ID HALOGEN_NEXT_TOKEN_S HALOGEN_PRESENCE_PENALTY \
@@ -977,7 +1009,7 @@ HALOGEN_TEMPERATURE HALOGEN_TEMPLATE_CHECK HALOGEN_TEMPLATE_UNCHECKED HALOGEN_TH
 HALOGEN_CHAT_TEMPLATE HALOGEN_STRICT_TOOLS HALOGEN_TOKENIZE_REUSE HALOGEN_TOP_K HALOGEN_TOP_P \
 HALOGEN_CACHE_LEAD"
 
-FE_ONLY_FLAGS="$FE_ONLY_FLAGS HALOGEN_FORK_AUTO_KEEPS HALOGEN_FORK_HANDLES HALOGEN_FORK_MAP"
+FE_ONLY_FLAGS="$FE_ONLY_FLAGS HALOGEN_FORK_AUTO_END_ONLY HALOGEN_FORK_AUTO_KEEPS HALOGEN_FORK_HANDLES HALOGEN_FORK_MAP"
 
 ENGINE_ENV_U=()
 for _v in $FE_ONLY_FLAGS; do ENGINE_ENV_U+=(-u "$_v"); done
@@ -1059,6 +1091,25 @@ npu_pin_get() {
 }
 
 npu_pin_files() { awk -v id="$1" '$1 == "file" && $2 == id {print $3, $4, $5}' "$NPU_PINS" 2>/dev/null || true; }
+
+npu_host_bytes() {
+  local ids p s b=0
+  ids=$(printf '%s' "${HALOGEN_NPU_MODELS:-}" | tr ',' ' ')
+  for p in $ids; do
+    case "$p" in /*) s=$(du -sk "$p" 2>/dev/null | awk '{print $1 * 1024}'); b=$((b + ${s:-0})) ;; esac
+  done
+  s=$(awk -v ids=" $ids " '
+    $1 == "model" { for (i = 3; i <= NF; i++) if (index($i, "devices=") == 1) dv[$2] = substr($i, 9) }
+    $1 == "file"  { n++; fid[n] = $2; pth[n] = $3; sz[n] = $4 }
+    END {
+      for (m in dv) if (index(ids, " " m " ")) base[dv[m]] = 1
+      for (k = 1; k <= n; k++)
+        if (index(ids, " " fid[k] " ")) t += sz[k]
+        else if ((fid[k] in base) && index(pth[k], "devices/") == 1) t += sz[k]
+      printf "%.0f", t
+    }' "${NPU_PINS:-${_hg_npu_pins:-/opt/halogen/npu/models.txt}}" 2>/dev/null) || s=0
+  echo $((b + ${s:-0}))
+}
 
 npu_devices_of() {
   local o

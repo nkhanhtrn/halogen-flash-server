@@ -1,5 +1,73 @@
 # Changelog
 
+## 0.18.15
+
+A conversation's next turn now starts where the previous reply ended, long answers no longer stop inside a code
+block, and a request whose client has gone no longer holds up the requests behind it. The Flash checkpoints are
+unchanged. At temperature 0 a single request's reply is byte-identical to 0.18.14's unless the new answer guard keeps
+it from ending (see Fixed).
+
+### Added
+
+- **A 2,097,152-position KV pool, eight full-length conversations at once (#200).** With `HALOGEN_KV8=1`,
+  `HALOGEN_KV_SLOTS=8`, `HALOGEN_MAX_TOK=16384` and `HALOGEN_KV_POOL_POSITIONS=2097152`, the default checkpoint fits on
+  a 128 GB machine, about 41 GB on the device. Measured with eight 242k-token conversations resident, every answer
+  identical to the same request run alone. It leaves little host memory, so run it without NPU models. The default pool
+  is unchanged.
+
+### Changed
+
+- **A conversation's next turn starts from where the previous reply ended, by default.** The server keeps each
+  conversation's state at the end of its reply (`HALOGEN_FORK_MAP=auto`, up to `HALOGEN_FORK_AUTO_KEEPS`
+  conversations, about 0.1 GiB of host memory each), so a follow-up turn skips reading the reply back in. When the KV
+  pool needs room, one of these states is released first, which costs that conversation a prefill, never a wrong
+  answer. With it on, the `X-Halogen-Keep` / `X-Halogen-From` headers and `/halogen/handles` are live on every server;
+  keep the port private. `HALOGEN_FORK=0` turns it off.
+- **Generation with drafting is about 1% slower at the defaults**, the cost of the reply-end keep above and of the
+  answer guard below; `HALOGEN_FORK=0` and `HALOGEN_ANSWER_GUARD=0` give 0.18.14's speed
+  ([measured](docs/performance.md#measured)).
+- **Structured output and strict tool calls decode faster**, most of all when several such requests run at once.
+  Greedy replies are unchanged. `HALOGEN_DV_GRAMMAR=0` and `HALOGEN_GRAMMAR_JOINT=0` give the previous behaviour.
+- **Short NPU requests and the streaming guard no longer wait behind long NPU jobs.** A decision, an embedding, a
+  rerank or a moderation of up to 1,024 tokens runs between two steps of a long NPU job (an image, a transcription, a
+  generation, a speech request) in a fraction of a second, and the streaming guard's checks run there first, so a
+  guarded reply keeps its checks beside speech and images. This was off in 0.18.14. Under a heavy mix of NPU requests
+  the long jobs wait longer in turn. `HALOGEN_NPU_SPLICE=0` turns it off. Every result is the same either way.
+
+### Fixed
+
+- **A request whose client disconnects while it waits is no longer prefilled (#204).** When a request was queued
+  behind another prompt's prefill and its client went away before it started, it was still admitted afterwards and its
+  whole prompt was read for nobody, so every request behind it waited that long. Its cancel is now applied before it
+  is admitted. Thanks @Gobutsu for the report and repro script, and @Tsury for confirming it.
+- **Long answers no longer stop inside a code block, on a heading or on a label (towards #89).** Deep in a long
+  context the model sometimes ends its turn where no answer can end. The server now keeps it from ending its turn
+  inside an open fenced code block, on a heading line, on a line that ends in `:` or opens `**` without closing it, or
+  on the blank line after one of those. Inside a code block that writes a ChatML template, an `<|im_end|>` the model
+  writes is kept as text. A reply that never reaches one of those places is unchanged. `HALOGEN_ANSWER_GUARD=0` turns
+  it off. Thanks @fiddlythings for the measurements.
+- **A host running out of memory no longer takes your session with it (#199).** The server's processes start with an
+  out-of-memory score of 500 (`HALOGEN_OOM_SCORE_ADJ`, `0` leaves the inherited value), so if the host runs out, the
+  kernel ends this container before the desktop session or the container runtime, and a restart policy brings it
+  back. Thanks @tkajdro for the report.
+- **The NPU models' host memory is counted (#199).** Each NPU model takes host memory that cannot be swapped as it is
+  used, up to about the size of its files. The startup check now adds up the models in `HALOGEN_NPU_MODELS` and warns
+  when the host cannot hold them beside the Flash model's weights and KV pool. While it runs, the NPU engine keeps at
+  least 4 GiB of host memory available (`HALOGEN_NPU_HOST_FLOOR_GIB`) and answers a request that would need more with
+  a 503 and the code `host_memory`, instead of the host running out of memory.
+- **A speech request the NPU cannot fit no longer stops every NPU model.** When the NPU's memory was short during a
+  text-to-speech request, the NPU engine ended and every NPU request after it failed until a restart. The request now
+  frees the other models' idle NPU memory and tries once more; if it still cannot run, that request alone gets a 503
+  with the reason, and the NPU engine keeps serving.
+- **A forced tool call that runs out of `max_tokens` is no longer a 502.** With `tool_choice` set to `required` or to
+  a named function, a reply that hit the token limit while writing the call came back as HTTP 502 Bad Gateway. It is
+  now a normal reply with the call so far: on chat completions `finish_reason: "length"` and the arguments written up
+  to the limit (not valid JSON, as the stream already sent them); on the Messages API `stop_reason: "max_tokens"` and
+  the `tool_use` block with an empty `input`; on the Responses API an `incomplete` response whose `function_call`
+  item is `incomplete`. A model that declines a forced call still gets the 502.
+- **`/detokenize` no longer stalls the server.** A long list of token ids held every route, `/health` included, for
+  minutes. It now answers in milliseconds at any length.
+
 ## 0.18.14
 
 Text to speech on the NPU, and a long answer the prompt cache had cut short now gets the room it asked for.

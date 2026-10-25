@@ -49,6 +49,13 @@ Larger sizes of the first three are named the same way (see [Larger sizes](#larg
 
   It costs about a watt while held. If the clock is not held and the server cannot hold it, it refuses to start and
   prints the commands for your machine. This applies to any NPU program beside a GPU program, not only to this server.
+- **Host memory for the models you name.** The NPU reads each model from host memory that cannot be swapped, and a
+  model takes more of it as it is used, up to about the size of its files: for example `qwen3-embedding-0.6b` 0.8 GiB,
+  `decider-4b` 5.5 GiB, `flux2-klein-4b` 7.6 GiB, and twelve models together about 43 GiB. That comes on top of the
+  Flash model's weights and its KV pool. At startup the server adds up the models you named and warns when the host
+  cannot hold everything once it is in use. While it runs, the NPU engine keeps `HALOGEN_NPU_HOST_FLOOR_GIB` (default
+  4) GiB of host memory available: past that, a request answers 503 with the code `host_memory` instead of the host
+  running out of memory. Name only the models you use.
 
 Check the NPU with `ls -l /dev/accel/accel0`.
 
@@ -64,7 +71,7 @@ podman run --rm -p 8731:8731 \
   -e HALOGEN_DOWNLOAD=peonist-ai/halogen-qwen3.8-flash-next \
   -e HALOGEN_NPU_MODELS=decider-0.8b,qwen3-embedding-0.6b,qwen3-reranker-0.6b,qwen3guard-gen-0.6b,qwen3.5-2b \
   -v ~/halogen-models:/models \
-  ghcr.io/peonist-ai/halogen-flash-server:0.18.14
+  ghcr.io/peonist-ai/halogen-flash-server:0.18.15
 ```
 
 `HALOGEN_DOWNLOAD` fetches the files of the NPU models that `HALOGEN_NPU_MODELS` names, into `/models/npu`, and the
@@ -481,11 +488,12 @@ The talker runs on the NPU and the audio is decoded on the CPU. On a Strix Halo 
 than real time and the 1.7B a little faster than real time, with the first audio in about 0.3 and 0.4 seconds. One
 text-to-speech model is served at a time.
 
-The NPU speaks one request at a time, and the other NPU models' requests wait until the speech in progress is done,
-the streaming guard's checks among them: a guarded reply that streams beside a long speech request can end before the
-guard has read it, and its end event says so. With `HALOGEN_NPU_SPLICE=1`, a short request to another NPU model (a
-decision, an embedding, a rerank or a moderation of up to 1,024 tokens) runs between two frames instead, in a fraction
-of a second; under a heavy mix of NPU requests that setting also delays the streaming guard, so it is off by default.
+The NPU speaks one request at a time, frame by frame. The streaming guard's checks and a short request to another NPU
+model (a decision, an embedding, a rerank or a moderation of up to 1,024 tokens) run between two frames, in a fraction
+of a second, the guard's checks first; longer requests wait until the speech in progress is done. Under a heavy mix of
+NPU requests a speech request takes longer in turn, as it makes room for them. With `HALOGEN_NPU_SPLICE=0` every other
+NPU request waits for the speech, the guard's checks among them: a guarded reply that streams beside a long speech
+request can then end before the guard has read it, and its end event says so.
 
 <a id="your-own-model"></a>
 ## Your own model

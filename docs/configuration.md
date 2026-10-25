@@ -98,6 +98,7 @@ default checkpoint and four slots on a 128 GB machine:
 | **524,288 (default)** | **two full conversations, or four at 131k** | **27.0 GiB** | **starts and serves** |
 | 786,432 | three full conversations, or four at 196k | 34.2 GiB | three 250k conversations resident and generating, memory flat |
 | 1,048,576 | four full conversations, or eight at 131k | 36.9 GiB with `HALOGEN_MAX_TOK=16384` | the 1M configuration's layout. At the default `MAX_TOK` it is 41.4 GiB, which a 128 GB machine fits only with a smaller `HALOGEN_HOST_RESERVE_GIB` (below) |
+| 2,097,152 | eight full conversations | about 41 GiB with `HALOGEN_KV8=1` and `HALOGEN_MAX_TOK=16384` | eight 242k conversations resident, each answer identical to the request alone; not with 16-bit KV (about 58 GiB of pool), w4b, or NPU models beside it |
 
 A request reserves its prompt plus `max_tokens` positions when it is
 admitted (the chat default budget is 8,192 tokens, so a 30,000-token
@@ -527,7 +528,7 @@ podman run --rm --name halogen -p 8731:8731 \
   -e HALOGEN_DOWNLOAD=peonist-ai/halogen-qwen3.8-flash-next \
   -v ~/halogen-models:/models \
   -v ~/halogen-records:/records -e HALOGEN_RECORD_DIR=/records \
-  ghcr.io/peonist-ai/halogen-flash-server:0.18.14
+  ghcr.io/peonist-ai/halogen-flash-server:0.18.15
 ```
 
 The startup log then says `request records ON in /records`, with the text

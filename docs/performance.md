@@ -6,6 +6,16 @@ checkpoint a machine, with the conditions each table names. Decode depends
 on how predictable the text is: quote the row for the kind of text you
 run, never one number for all of them.
 
+## 0.18.15 against 0.18.14
+
+The 0.18.15 image at its defaults (prompt cache on unless a row says otherwise, thinking off), each row an A/B pair on one machine in one session, the same machines as the 0.18.14 table below; 0.18.14 is the left figure of each pair. Generation with drafting reads about 1% lower: the answer guard and the reply-end keep, both on by default, each cost a little of it (with `HALOGEN_ANSWER_GUARD=0` and `HALOGEN_FORK=0` it reads 0.18.14's figure). Prefill is unchanged:
+
+| | v2 | ht43 |
+|---|---|---|
+| `bench` with drafting over ten prompt shapes, greedy, mean | 66.66 / 65.88 tok/s | 67.16 / 66.11 tok/s |
+| prefill cache off, 8,192 / 32,768 | 1,876 / 1,822 vs 1,878 / 1,824 | 1,824 / 1,854 vs 1,806 / 1,849 |
+| prefill cache on (cold), 8,192 / 32,768 | 1,791 / 1,848 vs 1,793 / 1,849 | 1,811 / 1,859 vs 1,805 / 1,858 |
+
 ## 0.18.14 against 0.18.13
 
 The published 0.18.14 image at its defaults (prompt cache on unless a row says otherwise, thinking off), each row an A/B pair on one machine in one session, the same machines as the 0.18.13 table below; 0.18.13 is the left figure of each pair:
@@ -340,8 +350,8 @@ produced byte-identical output on every case**, on both checkpoints.
 Reproduce the numbers with the benchmarks baked into the image:
 
 ```bash
-podman run ... ghcr.io/peonist-ai/halogen-flash-server:0.18.14 bench serial,mtp 256 low 3
-podman run ... -e HALOGEN_PROMPT_CACHE=0 ghcr.io/peonist-ai/halogen-flash-server:0.18.14 sweep -p 8192,32768 -n 128
+podman run ... ghcr.io/peonist-ai/halogen-flash-server:0.18.15 bench serial,mtp 256 low 3
+podman run ... -e HALOGEN_PROMPT_CACHE=0 ghcr.io/peonist-ai/halogen-flash-server:0.18.15 sweep -p 8192,32768 -n 128
 ```
 
 Run the sweep with the prompt cache off, as above. It repeats one prompt per
