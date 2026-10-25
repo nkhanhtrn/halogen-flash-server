@@ -5,9 +5,19 @@ on:
     branches: [main]
     paths:
       - "website/**"
+      - "docs/**"
+      - "mkdocs.yml"
+      - "llms.txt"
+      - "README.md"
+      - "tools/check_docs.py"
       - "tools/deploy-website.sh"
       - ".github/workflows/site.yml"
   workflow_dispatch:
+    inputs:
+      dry:
+        description: "Dry run: print what a deploy would upload and delete, change nothing"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,6 +32,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r docs/requirements.txt
+      - run: python tools/check_docs.py
       - name: Check the site
         run: bash tools/deploy-website.sh --check
       - name: Upload to S3 and invalidate CloudFront
@@ -30,6 +45,7 @@ jobs:
           SITE_BUCKET: ${{ secrets.SITE_BUCKET }}
           SITE_DISTRIBUTION: ${{ secrets.SITE_DISTRIBUTION }}
           AWS_REGION: ${{ vars.SITE_REGION || 'us-east-1' }}
+          MODE: ${{ inputs.dry && 'dry' || '--go' }}
         run: |
           set -euo pipefail
           # GitHub's OIDC token for this run, exchanged for short-lived AWS
@@ -44,4 +60,4 @@ jobs:
           export AWS_SESSION_TOKEN=$(jq -r .SessionToken <<<"$creds")
           echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
           echo "::add-mask::$AWS_SESSION_TOKEN"
-          bash tools/deploy-website.sh --go
+          bash tools/deploy-website.sh "$MODE"

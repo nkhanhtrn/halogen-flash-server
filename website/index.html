@@ -5,7 +5,7 @@
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="site"><div class="wrap"><a class="brand" href="index.html" aria-label="halogen, home"><span class="medal" role="img" aria-label="halogen medallion"></span><b>halogen</b></a>
-<div class="hr"><nav class="main" aria-label="Main"><ul><li><a href="benchmarks.html">Benchmarks</a></li><li><a href="models.html">Models</a></li><li><a href="https://peonist-ai.github.io/halogen-flash-server/">Docs</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li></ul></nav><button class="theme" type="button" hidden aria-label="Switch theme"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><details class="menu"><summary>Menu</summary><nav aria-label="Main, small screens"><ul><li><a href="benchmarks.html">Benchmarks</a></li><li><a href="models.html">Models</a></li><li><a href="https://peonist-ai.github.io/halogen-flash-server/">Docs</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li></ul></nav></details></div></div></header>
+<div class="hr"><nav class="main" aria-label="Main"><ul><li><a href="benchmarks.html">Benchmarks</a></li><li><a href="models.html">Models</a></li><li><a href="docs/">Docs</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li></ul></nav><button class="theme" type="button" hidden aria-label="Switch theme"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><details class="menu"><summary>Menu</summary><nav aria-label="Main, small screens"><ul><li><a href="benchmarks.html">Benchmarks</a></li><li><a href="models.html">Models</a></li><li><a href="docs/">Docs</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li></ul></nav></details></div></div></header>
 <main id="main">
 
 <section class="hero"><div class="wrap">
@@ -21,7 +21,7 @@ podman run --rm -p 8731:8731 \
   -v ~/halogen-models:/models \
   ghcr.io/peonist-ai/halogen-flash-server:0.18.15</code></pre></div>
 <p class="note">Set the BIOS carve-out (UMA frame buffer) to its minimum, not Auto: this engine wants host RAM, not dedicated VRAM. The weights, about 111 GiB, are fetched on first start. The server answers on port 8731, OpenAI-compatible.</p>
-<p class="quiet"><a href="https://peonist-ai.github.io/halogen-flash-server/getting-started/">Read the Quickstart</a></p>
+<p class="quiet"><a href="docs/getting-started/">Read the Quickstart</a></p>
 </div>
 <div class="art"><div class="emb" role="img" aria-label="The halogen emblem: a ring of brass around carved stone, with glowing red runes"></div></div>
 </div></section>
@@ -40,17 +40,17 @@ podman run --rm -p 8731:8731 \
 
 <section class="blk" aria-labelledby="agents"><div class="wrap two">
 <div class="l"><p class="kicker">One port</p><h2 id="agents">Built for agents</h2><p style="margin-top:20px" class="mute">The APIs your harness already speaks, on one port.</p>
-<p class="more small"><a href="https://peonist-ai.github.io/halogen-flash-server/agent-harness/">From an agent harness</a><br><a href="https://peonist-ai.github.io/halogen-flash-server/classifier/">Using it as a classifier</a></p></div>
+<p class="more small"><a href="docs/agent-harness/">From an agent harness</a><br><a href="docs/classifier/">Using it as a classifier</a></p></div>
 <div class="r"><dl class="defs">
-<div><dt>OpenAI API</dt><dd><code class="ep">/v1</code><p>Chat Completions and Completions, streaming, tool calls, structured output.</p><a href="https://peonist-ai.github.io/halogen-flash-server/api/">API reference</a></dd></div>
-<div><dt>Codex and Responses</dt><dd><code class="ep">/v1/responses</code><p>The OpenAI Responses API. Point the Codex CLI at the server and it works, tool calls included.</p><a href="https://peonist-ai.github.io/halogen-flash-server/codex/">Codex guide</a></dd></div>
-<div><dt>Claude Code and Messages</dt><dd><code class="ep">/v1/messages</code><p>The Anthropic Messages API, built from what Claude Code actually sends.</p><a href="https://peonist-ai.github.io/halogen-flash-server/claude-code/">Claude Code guide</a></dd></div>
-<div><dt>Sessions: keep, fork, join</dt><dd><p>A harness that runs several branches from one conversation can keep its state under a name and start new requests from it.</p><a href="https://peonist-ai.github.io/halogen-flash-server/sessions/">Sessions</a></dd></div>
+<div><dt>OpenAI API</dt><dd><code class="ep">/v1</code><p>Chat Completions and Completions, streaming, tool calls, structured output.</p><a href="docs/api/">API reference</a></dd></div>
+<div><dt>Codex and Responses</dt><dd><code class="ep">/v1/responses</code><p>The OpenAI Responses API. Point the Codex CLI at the server and it works, tool calls included.</p><a href="docs/codex/">Codex guide</a></dd></div>
+<div><dt>Claude Code and Messages</dt><dd><code class="ep">/v1/messages</code><p>The Anthropic Messages API, built from what Claude Code actually sends.</p><a href="docs/claude-code/">Claude Code guide</a></dd></div>
+<div><dt>Sessions: keep, fork, join</dt><dd><p>A harness that runs several branches from one conversation can keep its state under a name and start new requests from it.</p><a href="docs/sessions/">Sessions</a></dd></div>
 </dl></div></div></section>
 
 <section class="blk" aria-labelledby="npu"><div class="wrap two">
 <div class="l"><p class="kicker">Ryzen AI NPU</p><h2 id="npu">On the NPU, same port</h2><p style="margin-top:20px" class="mute">Small models run beside the Flash model. A request picks one by its <code>model</code>. Leave <code>HALOGEN_NPU_MODELS</code> out and nothing changes.</p>
-<p class="more small"><a href="models.html">The full roster</a><br><a href="https://peonist-ai.github.io/halogen-flash-server/npu-small-models/">Small models on the NPU</a></p></div>
+<p class="more small"><a href="models.html">The full roster</a><br><a href="docs/npu-small-models/">Small models on the NPU</a></p></div>
 <div class="r"><ul class="tasks">
 <li><b>Decide</b><span><a href="models.html#decide"><code>decider-0.8b</code> <code>d3-lite</code> <code>d3-nano</code></a></span></li>
 <li><b>Embed</b><span><a href="models.html#embed"><code>qwen3-embedding-0.6b</code> <code>embeddinggemma-2</code></a></span></li>
@@ -85,12 +85,12 @@ podman run --rm -p 8731:8731 \
 <div class="rw"><dt>Disk</dt><dd><p>The first start fetches the weights, about 111 GiB.</p></dd></div>
 <div class="rw"><dt>NPU models (optional)</dt><dd><p>The NPU driver, XRT with its NPU plugin, the NPU firmware, and the IOMMU on. The GPU's fabric clock held at its top speed, or the server refuses to start and prints the commands for your machine.</p></dd></div>
 </dl>
-<p class="src">Sources: <a href="https://peonist-ai.github.io/halogen-flash-server/troubleshooting/#the-host-settings-these-numbers-were-measured-on">host settings</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/host-setup/">a machine of its own</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/NPU/">NPU host details</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/getting-started/">Quickstart</a>, <a href="https://peonist-ai.github.io/halogen-flash-server/limits/">limits</a>.</p>
+<p class="src">Sources: <a href="docs/troubleshooting/#the-host-settings-these-numbers-were-measured-on">host settings</a>, <a href="docs/host-setup/">a machine of its own</a>, <a href="docs/NPU/">NPU host details</a>, <a href="docs/getting-started/">Quickstart</a>, <a href="docs/limits/">limits</a>.</p>
 </div></div></section>
 
 </main>
 <footer class="site"><div class="wrap">
-<ul><li><a href="https://peonist-ai.github.io/halogen-flash-server/">Documentation</a></li><li><a href="https://peonist-ai.github.io/halogen-flash-server/getting-started/">Quickstart</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/issues">Issues</a></li><li><a href="https://discord.gg/bcm6QknaV6">Discord</a></li></ul>
+<ul><li><a href="docs/">Documentation</a></li><li><a href="docs/getting-started/">Quickstart</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/CHANGELOG.md">Changelog</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server">GitHub</a></li><li><a href="https://github.com/peonist-ai/halogen-flash-server/issues">Issues</a></li><li><a href="https://discord.gg/bcm6QknaV6">Discord</a></li></ul>
 <p>halogen is a product of Peonist, LLC. It is distributed as a container image under an end user license agreement: <a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/LICENSE.md">LICENSE.md</a>. "halogen" and "Peonist" are trademarks of Peonist, LLC: <a href="https://github.com/peonist-ai/halogen-flash-server/blob/main/TRADEMARKS.md">TRADEMARKS.md</a>.</p>
 </div></footer>
 <script>

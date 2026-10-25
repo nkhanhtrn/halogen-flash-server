@@ -1,6 +1,6 @@
 site_name: halogen-flash-server
 site_description: Run Qwen3.8-Flash-Next on AMD Strix Halo — a dedicated ROCm/HIP inference engine with an OpenAI-compatible API built for agents.
-site_url: https://peonist-ai.github.io/halogen-flash-server/
+site_url: https://peonist.ai/halogen/docs/
 repo_url: https://github.com/peonist-ai/halogen-flash-server
 repo_name: peonist-ai/halogen-flash-server
 docs_dir: docs
